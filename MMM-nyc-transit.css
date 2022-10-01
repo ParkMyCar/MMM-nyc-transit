@@ -2,12 +2,39 @@
   display: inline-block;
   text-align: left;
   list-style: none;
-  width: 100%;
-  margin: 0 auto;
   overflow: hidden;
   white-space: nowrap;
   box-sizing: border-box;
   animation: marquee 50s linear infinite;
+}
+
+.mta__station {
+  text-align: left;
+  display: flex;
+  padding-bottom: 4px;
+  border-bottom: 2px solid;
+  margin-bottom: 24px; 
+}
+
+.mta__station--title {
+  margin: 0;
+}
+
+.mta__station--list {
+  display: flex;
+  align-items: center;
+}
+
+.mta__station--list_container {
+  display: flex;
+  flex-direction: row-reverse;
+  margin-left: 16px;
+}
+
+.mta__station--list
+.mta__train--logo {
+  margin-left: -4px;
+  margin-right: 0;
 }
 
 .mta__train {
@@ -31,8 +58,10 @@
 }
 
 .mta__train--item {
-  display: block;
+  display: flex;
   text-align: left;
+  justify-content: flex-start;
+  margin-bottom: 8px;
 }
 
 .mta__train--item-express {
@@ -51,19 +80,24 @@
 }
 
 .mta__train--logo {
-  line-height: 29px;
-  margin-right: 10px;
-  display: inline-block;
-  margin-bottom: -5px;
-}
-
-.mta__train--time,
-.mta__train--destination {
-  display: inline;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 16px;
 }
 
 .mta__train--time {
   color: #ffffff;
+  display: flex;
+  margin-left: auto;
+}
+
+.mta__train--time_item {
+  margin-left: 8px;
+}
+
+.mta__train--destination {
+  display: inline;
 }
 
 .mta__train--line-a,

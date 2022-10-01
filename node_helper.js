@@ -8,6 +8,7 @@ var NodeHelper = require('node_helper')
 var { createClient } = require('mta-realtime-subway-departures')
 var fs = require('fs-extra')
 var mtaStationIds = require('mta-subway-stations')
+const util = require('util')
 
 module.exports = NodeHelper.create({
   start: function () {
@@ -41,6 +42,8 @@ module.exports = NodeHelper.create({
       .then((responses) => {
         var upTown = []
         var downTown = []
+
+        console.log(util.inspect(responses, false, null, true /* enable colors */))
 
         if (responses.length === undefined) {
           var temp = responses
@@ -91,58 +94,6 @@ module.exports = NodeHelper.create({
                   walkingTime: walkingTime[n],
                 })
               }
-              responses.forEach((response, n) => {
-                response.lines.forEach((line) => {
-                  // Southbound Departures
-                  line.departures.S.forEach((i) => {
-                    for (var key in mtaStationIds) {
-                      if (i.destinationStationId === mtaStationIds[key]['Station ID']) {
-                        i.destinationStationId = mtaStationIds[key]['Complex ID']
-                      }
-                    }
-
-                    if (i.destinationStationId !== undefined && dirDownTown[n]) {
-                      downTown.push({
-                        routeId: i.routeId,
-                        time: this.getDate(
-                          i.time,
-                          walkingTime[n]
-                        ),
-                        destination:
-                          i.destinationStationId ==='281'
-                            ? stationIds['606'].name
-                            : stationIds[
-                              i.destinationStationId].name,
-                        walkingTime: walkingTime[n],
-                      })
-                    }
-                  })
-
-                  // Nothbound Departures
-                  line.departures.N.forEach((i) => {
-                    for (var key in mtaStationIds) {
-                      if (i.destinationStationId ===mtaStationIds[key]['Station ID']) {
-                        i.destinationStationId = mtaStationIds[key]['Complex ID']
-                      }
-                    }
-
-                    if (i.destinationStationId !== undefined && dirUpTown[n]) {
-                      upTown.push({
-                        routeId: i.routeId,
-                        time: this.getDate(
-                          i.time,
-                          walkingTime[n]
-                        ),
-                        destination:
-                          i.destinationStationId ==='281'
-                            ? stationIds['606'].name
-                            : stationIds[i.destinationStationId].name,
-                        walkingTime: walkingTime[n],
-                      })
-                    }
-                  })
-                })
-              })
 
               if (isList) {
                 self.sendSocketNotification('TRAIN_TABLE', {
@@ -199,7 +150,7 @@ module.exports = NodeHelper.create({
     // Will display time in minutes format
     var formattedTime = Number(mindiff.substr(-2))
 
-    return formattedTime - walkingTime
+    return formattedTime - (walkingTime || 0)
   },
 
   //Subclass socketNotificationReceived received.

@@ -87,12 +87,30 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
     var data = this.result // the data is not ready
     var wrapper = document.createElement('div')
     var marquee = document.createElement('marquee')
+    var station = document.createElement('div')
     var list = document.createElement('ul')
     var isList = this.config.displayType !== 'marquee'
 
     wrapper.className = 'MMM-nyc-transit'
+    station.className = 'mta__station'
     list.className = 'mta__train--list'
     marquee.className = 'mta__train--marquee'
+
+    var stationHTML = 
+      '<h2 class="mta__station--title">' + 
+        'Lexington Avenue / 51st Street' +
+      '</h2>' +
+      '<div class="mta__station--list">' +
+        '<div class="mta__station--list_container">' +
+          '<span class="mta mta__train mta__train--logo mta__train--line-m">M</span>' +
+          '<span class="mta mta__train mta__train--logo mta__train--line-e">E</span>' +
+          '<span class="mta mta__train mta__train--logo mta__train--line-6">6</span>' +
+        '</div>' +
+      '</div>';
+    station.innerHTML = stationHTML;
+
+    // append the Station title
+    wrapper.appendChild(station)
 
     if (data) {
       var downTown = data[0].downTown
@@ -146,7 +164,7 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
                       (trainTime, i) =>
                           "<span data-walking-time='" +
                           trainHashMap.downTown[dKey].walkingTime +
-                          "' class='train-time__downTown-" +
+                          "' class='mta__train--time_item train-time__downTown-" +
                           dKey.toLowerCase() +
                           "--" +
                           i +
@@ -198,7 +216,7 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
                       (trainTime, i) =>
                           "<span data-walking-time='" +
                           trainHashMap.upTown[uKey].walkingTime +
-                          "' class='train-time__upTown-" +
+                          "' class='mta__train--time_item train-time__upTown-" +
                           uKey.toLowerCase() +
                           "--" +
                           i +
