@@ -4,6 +4,7 @@
  * By Elan Trybuch https://github.com/elaniobro
  * MIT Licensed.
  */
+
 var NodeHelper = require('node_helper')
 var { createClient } = require('mta-realtime-subway-departures')
 var fs = require('fs-extra')
@@ -12,7 +13,7 @@ const util = require('util')
 
 module.exports = NodeHelper.create({
   start: function () {
-    console.log( this.name + ' helper method started...'); /*eslint-disable-line*/
+    console.log(this.name + ' helper method started...'); /*eslint-disable-line*/
   },
 
   getDepartures: function (config) {
@@ -22,9 +23,12 @@ module.exports = NodeHelper.create({
     var stations = config.stations.map((obj) => obj.stationId)
     var stationIds = {}
     var walkingTime = config.stations.map((obj) => obj.walkingTime)
+
     var dirUpTown = config.stations.map((obj) => obj.dir.upTown)
     var dirDownTown = config.stations.map((obj) => obj.dir.downTown)
-    var isList = config.displayType !== 'marquee'
+
+    /** @type {Map<number, [string]>} */
+    const ignoredRoutesPerStation = new Map(config.stations.map((obj) => [obj.stationId, obj.ignore]))
 
     fs.readFile(
       `${__dirname}/node_modules/mta-subway-complexes/complexes.json`,
@@ -40,10 +44,7 @@ module.exports = NodeHelper.create({
     client
       .departures(stations)
       .then((responses) => {
-        var upTown = []
-        var downTown = []
-
-        console.log(util.inspect(responses, false, null, true /* enable colors */))
+        // console.log(util.inspect(responses, false, null, true /* enable colors */))
 
         if (responses.length === undefined) {
           var temp = responses
@@ -52,7 +53,19 @@ module.exports = NodeHelper.create({
           responses.push(temp)
         }
 
+        /** @type {[StationData]} */
+        var result = []
+
         responses.forEach((response, n) => {
+          /** @type {StationData} */
+          var stationData = {
+            complexId: response.complexId,
+            upTownArrivals: [],
+            downTownArrivals: [],
+          }
+
+          const ignoredRoutes = ignoredRoutesPerStation.get(response.complexId) || []
+
           response.lines.forEach((line) => {
             // Southbound Departures
             line.departures.S.forEach((i) => {
@@ -62,16 +75,16 @@ module.exports = NodeHelper.create({
                 }
               }
 
-              if (i.destinationStationId !== undefined && dirDownTown[n]) {
-                downTown.push({
+              if (i.destinationStationId !== undefined && dirDownTown[n] && !ignoredRoutes.includes(i.routeId)) {
+                /** @type {ArrivalData} */
+                const arrival = {
                   routeId: i.routeId,
-                  time: this.getDate(i.time, walkingTime[n]),
-                  destination:
-                    i.destinationStationId === '281'
-                      ? stationIds['606'].name
-                      : stationIds[i.destinationStationId].name,
-                  walkingTime: walkingTime[n],
-                })
+                  minutes: this.getDate(i.time, walkingTime[n]),
+                  destination: i.destinationStationId === '281'
+                    ? stationIds['606'].name
+                    : stationIds[i.destinationStationId].name,
+                };
+                stationData.downTownArrivals.push(arrival);
               }
             })
 
@@ -83,56 +96,28 @@ module.exports = NodeHelper.create({
                 }
               }
 
-              if (i.destinationStationId !== undefined && dirUpTown[n]) {
-                upTown.push({
+              if (i.destinationStationId !== undefined && dirUpTown[n] && !ignoredRoutes.includes(i.routeId)) {
+                /** @type {ArrivalData} */
+                const arrival = {
                   routeId: i.routeId,
-                  time: this.getDate(i.time, walkingTime[n]),
-                  destination:
-                    i.destinationStationId === '281'
-                      ? stationIds['606'].name
-                      : stationIds[i.destinationStationId].name,
-                  walkingTime: walkingTime[n],
-                })
-              }
-
-              if (isList) {
-                self.sendSocketNotification('TRAIN_TABLE', {
-                  stations: stations,
-                  data: [
-                    { downTown: downTown.filter((train) => train.time > 0),},
-                    { upTown: upTown.filter((train) => train.time > 0),},
-                  ]
-                })
-              } else {
-                self.sendSocketNotification('TRAIN_TABLE', {
-                  stations: stations,
-                  data: [
-                    { downTown: downTown.filter((train) => train.time > 0).slice(0, 3),},
-                    { upTown: upTown.filter((train) => train.time > 0).slice(0, 3),},
-                  ]
-                })
+                  minutes: this.getDate(i.time, walkingTime[n]),
+                  destination: i.destinationStationId === '281'
+                    ? stationIds['606'].name
+                    : stationIds[i.destinationStationId].name,
+                };
+                stationData.upTownArrivals.push(arrival);
               }
             })
           })
+
+          // filter out arrivals that are 0 minutes away, aka arriving now
+          stationData.upTownArrivals = stationData.upTownArrivals.filter((arrival) => arrival.minutes > 0)
+          stationData.downTownArrivals = stationData.downTownArrivals.filter((arrival) => arrival.minutes > 0)
+
+          result.push(stationData);
         })
 
-        if (isList) {
-          self.sendSocketNotification('TRAIN_TABLE', {
-            stations: stations,
-            data: [
-              { downTown: downTown.filter((train) => train.time > 0),},
-              { upTown: upTown.filter((train) => train.time > 0) },
-            ]
-          })
-        } else {
-          self.sendSocketNotification('TRAIN_TABLE', {
-            stations: stations,
-            data: [
-              { downTown: downTown.filter((train) => train.time > 0).slice(0, 3),},
-              { upTown: upTown.filter((train) => train.time > 0).slice(0, 3),}
-            ]
-          })
-        }
+        self.sendSocketNotification('TRAIN_TABLE', result);
       })
       .catch((err) => {
         throw new Error(err)
@@ -160,3 +145,19 @@ module.exports = NodeHelper.create({
     }
   },
 })
+
+/**
+ * @typedef StationData
+ * @type {object}
+ * @property {string} complexId
+ * @property {[ArrivalData]} upTownArrivals
+ * @property {[ArrivalData]} downTownArrivals
+ */
+
+/**
+ * @typedef ArrivalData
+ * @type {object}
+ * @property {string} routeId
+ * @property {number} minutes
+ * @property {string} destination
+ */

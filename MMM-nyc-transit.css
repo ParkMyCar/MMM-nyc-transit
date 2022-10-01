@@ -1,3 +1,8 @@
+.MMM-nyc-transit {
+  font-family: 'Helvetica', 'Arial', sans-serif;
+  color: #ffffff;
+}
+
 .mta {
   display: inline-block;
   text-align: left;
@@ -12,17 +17,18 @@
   text-align: left;
   display: flex;
   padding-bottom: 4px;
-  border-bottom: 2px solid;
-  margin-bottom: 24px; 
+  margin-bottom: 24px;
 }
 
 .mta__station--title {
   margin: 0;
+  font-size: 64px;
 }
 
 .mta__station--list {
   display: flex;
   align-items: center;
+  margin: 0;
 }
 
 .mta__station--list_container {
@@ -31,22 +37,21 @@
   margin-left: 16px;
 }
 
-.mta__station--list
-.mta__train--logo {
-  margin-left: -4px;
+.mta__station--list .mta__train--logo {
+  margin-left: 8px;
   margin-right: 0;
 }
 
 .mta__train {
   color: #ffffff;
-  height: 30px;
-  width: 30px;
+  height: 64px;
+  width: 64px;
   border-radius: 50%;
   text-transform: uppercase;
   text-align: center;
   padding: 2px;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 26px;
+  font-size: 48px;
   font-weight: bold;
   display: inline-grid;
   align-content: center;
@@ -54,14 +59,32 @@
 
 .mta__train--list {
   padding: 0;
-  margin: 0;
+  margin: 0 0 64px;
+}
+
+.mta__train--list--header {
+  border-bottom: 1px solid;
+  margin: 32px 0;
+  line-height: 0.1em;
+  text-align: left;
+  font-size: 24px;
+}
+
+.mta__train--list--header_text {
+  background: #000;
+  padding: 0 8px;
+  margin: 0 16px;
 }
 
 .mta__train--item {
   display: flex;
   text-align: left;
   justify-content: flex-start;
-  margin-bottom: 8px;
+  align-items: center;
+}
+
+.mta__train--item:not(:last-child) {
+  margin-bottom: 16px;
 }
 
 .mta__train--item-express {
@@ -87,17 +110,18 @@
 }
 
 .mta__train--time {
-  color: #ffffff;
   display: flex;
   margin-left: auto;
+  font-size: 32px;
 }
 
 .mta__train--time_item {
   margin-left: 8px;
 }
 
-.mta__train--destination {
-  display: inline;
+.mta_train--time_destination {
+  margin: 0;
+  font-size: 32px;
 }
 
 .mta__train--line-a,
