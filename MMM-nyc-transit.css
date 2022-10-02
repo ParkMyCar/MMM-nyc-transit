@@ -1,5 +1,5 @@
 .MMM-nyc-transit {
-  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-family: Helvetica, Arial, sans-serif;
   color: #ffffff;
 }
 
@@ -22,7 +22,7 @@
 
 .mta__station--title {
   margin: 0;
-  font-size: 64px;
+  font-size: 52px;
 }
 
 .mta__station--list {
@@ -35,11 +35,6 @@
   display: flex;
   flex-direction: row-reverse;
   margin-left: 16px;
-}
-
-.mta__station--list .mta__train--logo {
-  margin-left: 8px;
-  margin-right: 0;
 }
 
 .mta__train {
@@ -71,7 +66,7 @@
 }
 
 .mta__train--list--header_text {
-  background: #000;
+  background: #000000;
   padding: 0 8px;
   margin: 0 16px;
 }
@@ -107,6 +102,11 @@
   justify-content: center;
   align-items: center;
   margin-right: 16px;
+}
+
+.mta__station--list .mta__train--logo {
+  margin-left: 8px;
+  margin-right: 0;
 }
 
 .mta__train--time {

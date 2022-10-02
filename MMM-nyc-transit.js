@@ -165,13 +165,17 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
 
         // Finally, create a header for each uptown and downtown, and add it to the DOM
 
-        const upTownHeader = this.generateTrainListHeader("Uptown");
-        wrapper.appendChild(upTownHeader)
-        wrapper.appendChild(upTownList)
+        if (upTown.length > 0) {
+          const upTownHeader = this.generateTrainListHeader("Uptown");
+          wrapper.appendChild(upTownHeader)
+          wrapper.appendChild(upTownList)
+        }
 
-        const downTownHeader = this.generateTrainListHeader("Downtown");
-        wrapper.appendChild(downTownHeader)
-        wrapper.appendChild(downTownList)
+        if (downTown.length > 0) {
+          const downTownHeader = this.generateTrainListHeader("Downtown");
+          wrapper.appendChild(downTownHeader)
+          wrapper.appendChild(downTownList)
+        }
       }
 
       return wrapper
@@ -276,7 +280,6 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
         .join('') +
       '</div>' +
       '</div>';
-    console.log(stationHTML);
     station.innerHTML = stationHTML;
 
     return station
@@ -357,6 +360,10 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
 
 /** @type {Object.<number, StationDetails>} */
 const COMPLEX_ID_STATION_NAME_MAP = {
+  277: {
+    name: "7 Av",
+    lines: ["E", "D", "B"]
+  },
   612: {
     name: "Lexington Av / 51 St",
     lines: ["M", "E", "6"]
