@@ -251,10 +251,12 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
   generateTrainLine: function (line, dest, times) {
     var listItem = document.createElement('li');
 
+    const expressTextClass = this.isExpress(line) ? 'mta__train--line-express-text' : '';
+
     const innerHtml =
       '<span class="mta mta__train mta__train--logo mta__train--line-' + line.toLowerCase().split("")[0] + " mta__train--line-" + this.isExpress(line) + '">' +
-      '<span class="' + this.isExpress(line).split("")[0] + '">' +
-      line +
+      '<span class="' + expressTextClass + '">' +
+      line[0] +
       '</span>' +
       '</span>' +
       '<p class="mta_train--time_destination">' +

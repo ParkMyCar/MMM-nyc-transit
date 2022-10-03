@@ -83,7 +83,7 @@
 }
 
 .mta__train--item-express {
-  margin: 3px 0;
+  margin-top: 24px;
 }
 
 .mta__train--marquee .mta__train--list {
@@ -101,7 +101,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 16px;
 }
 
 .mta__station--list .mta__train--logo {
@@ -120,7 +119,7 @@
 }
 
 .mta_train--time_destination {
-  margin: 0;
+  margin: 0 16px;
   font-size: 32px;
 }
 
@@ -175,21 +174,14 @@
 
 .mta__train--line-express {
   transform: rotate(45deg);
-  height: 20px;
-  width: 20px;
+  height: 48px;
+  width: 48px;
   border-radius: 0;
-  margin: 0 17px 0 4px;
-  padding: 0 1px;
+  margin: 0 8px;
 }
 
-.mta__train--line-express .express {
+.mta__train--line-express-text {
   transform: rotate(-45deg);
-  display: table-cell;
-  vertical-align: middle;
-  height: 20px;
-  width: 20px;
-  line-height: 0;
-  font-size: 18px;
 }
 
 .mta__train--line-7 {
