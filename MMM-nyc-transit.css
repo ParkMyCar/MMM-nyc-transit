@@ -202,3 +202,41 @@
   height: 35px;
   width: 35px;
 }
+
+.mta__bus-station {
+  text-align: left;
+  display: flex;
+  padding-bottom: 4px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid;
+}
+
+.mta__bus--list {
+  padding: 0;
+}
+
+.mta__bus--logo {
+  font-size: 40px;
+  font-weight: bold;
+  margin: 0 8px;
+  padding: 0 16px;
+  border-radius: 8px;
+}
+
+.mta__bus--list
+.mta__bus--logo {
+  font-size: 32px;
+  margin-right: 16px;
+}
+
+.mta__bus--time_not-predicted {
+  color: #ffcc00;
+}
+
+.mta__bus--line-m15 {
+  background-color: #0000c4;
+}
+
+.mta__bus--line-m15-sbs {
+  background-color: #0000c4;
+}

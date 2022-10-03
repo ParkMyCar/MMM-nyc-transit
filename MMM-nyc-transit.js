@@ -86,11 +86,21 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
 
     var observer = new MutationObserver(callback)
 
-    /** @type {[StationData] | null} */
+    /** @type {StationData[] | null} */
     var data = this.result // the data is not ready
+
+    /** @type {BusData | null} */
+    const busData = this.busResults;
 
     var wrapper = document.createElement('div')
     wrapper.className = 'MMM-nyc-transit'
+
+    if (!data && !busData) {
+      // observer mutation on targetNode with config obj
+      observer.observe(targetNode, config)
+
+      return wrapper
+    }
 
     if (data) {
       for (const stationData of data) {
@@ -177,13 +187,53 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
           wrapper.appendChild(downTownList)
         }
       }
-
-      return wrapper
     }
-    // observer mutation on targetNode with config obj
-    observer.observe(targetNode, config)
 
-    return wrapper
+    if (busData) {
+      for (const busStop of busData.stops) {
+        if (busStop.arrivals.length > 0) {
+          const header = this.generateBusStopHeader(busStop.stopId);
+          wrapper.appendChild(header);
+
+          const KEY_DELIMITER = '::_::';
+          
+          /** @type {Map<string, {minutes: number, isPredicted: boolean}[]>} */
+          var arrivalsMap = new Map();
+          for (const arrival of busStop.arrivals) {
+
+            const key = arrival.name + KEY_DELIMITER + arrival.overallDestination;
+            if (!arrivalsMap.get(key)) {
+              arrivalsMap.set(key, []);
+            }
+
+            arrivalsMap.get(key).push({
+              minutes: arrival.minutes, 
+              isPredicted: arrival.isPredicted
+            });
+          }
+          
+          var busList = document.createElement('ul')
+          busList.className = 'mta__bus--list'
+
+          for (const busKey of arrivalsMap.keys()) {
+            const arrivals = arrivalsMap.get(busKey)
+              .filter((arrival) => arrival.minutes > 0)
+              .slice(0, 3);
+            const parts = busKey.split(KEY_DELIMITER);
+
+            const name = parts[0];
+            const dest = parts[1];
+
+            const busArrivals = this.generateBusArrival(name, dest, arrivals);
+            busList.appendChild(busArrivals);
+          }
+
+          wrapper.appendChild(busList);
+        }
+      }
+    }
+
+    return wrapper;
   },
 
   /**
@@ -285,6 +335,83 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
     return station
   },
 
+  /**
+    * @param {number} stationId
+    * 
+    * @returns {HTMLDivElement}
+    */
+  generateBusStopHeader: function (stationId) {
+    var station = document.createElement('div')
+    station.className = 'mta__bus-station'
+
+    const station_details = BUS_STOP_ID_TO_NAME_MAP[stationId];
+
+    var stationHTML =
+      '<h2 class="mta__station--title">' +
+      station_details.name +
+      '</h2>' +
+      '<div class="mta__station--list">' +
+      '<div class="mta__station--list_container">' +
+      station_details.lines
+        .map((line, _i) => {
+          const logo = '' +
+            '<span class="mta mta__bus--logo mta__bus--line-' + line.toLowerCase() + '">' +
+            line +
+            '</span>';
+          return logo;
+        })
+        .join('') +
+      '</div>' +
+      '</div>';
+    station.innerHTML = stationHTML;
+
+    return station
+  },
+
+  /**
+   * Generate an HTML Line Item for a single bus line, e.g.
+   * 
+   * (M15) Brooklyn Bridge-City Hall / Chambers St     4min, 11min, 20min
+   * 
+   * 
+   * @param {string} line
+   * @param {string} dest
+   * @param {{ minutes: number, isPredicted: boolean }[]} times
+   * 
+   * @returns {HTMLLIElement}
+   */
+   generateBusArrival: function (line, dest, times) {
+    var listItem = document.createElement('li');
+
+    const destFormatted = dest.split(' ')
+      .map((word) => word.toLowerCase())
+      .map((word) => word[0].toUpperCase() + word.substr(1))
+      .join(' ');
+
+    const innerHtml =
+      '<span class="mta mta__bus--logo mta__bus--line-' + line.toLowerCase() + '">' +
+      line +
+      '</span>' +
+      '<p class="mta_train--time_destination">' +
+      destFormatted +
+      '</p>' +
+      '<span class="mta mta_train mta__train--time mta__train-time__' + line + '">' +
+      times.map((busTime, i) => {
+          const nonPredictedClass = busTime.isPredicted ? "" : " mta__bus--time_not-predicted";
+          const time = '' +
+            '<span class="mta__train--time_item train-time-' + line.toLowerCase() + '--' + i + nonPredictedClass + '">' +
+            busTime.minutes + 'min' +
+            '</span>';
+          return time;
+        }) +
+      '</span>';
+
+    listItem.className = 'mta__train--item mta__train--item-' + this.isExpress(line);
+    listItem.innerHTML = innerHtml;
+
+    return listItem;
+  },
+
   isExpress: function (id) {
     return id.split('').length === 2 ? 'express' : ''
   },
@@ -351,6 +478,12 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
 
       this.result = stationResults
       this.updateDom(this.config.fadeSpeed)
+    } else if (notification === "BUS_TABLE") {
+      const busResults = payload;
+      console.log("socketNotificationReceived: BUS_TABLE: ", busResults);
+
+      this.busResults = payload;
+      this.updateDom(this.config.fadeSpeed)
     } else if (notification === 'DOM_OBJECTS_CREATED') {
       // eslint-disable-next-line no-console
       console.log('Dom Objects Created')
@@ -374,6 +507,18 @@ const COMPLEX_ID_STATION_NAME_MAP = {
   },
 }
 
+/** @type {Object.<number, StationDetails>} */
+const BUS_STOP_ID_TO_NAME_MAP = {
+  401701: {
+    name: "1st Ave / Mitchell Place",
+    lines: ["M15-SBS", "M15"]
+  },
+  401768: {
+    name: "2nd Ave / 50 St",
+    lines: ["M15-SBS", "M15"]
+  }
+}
+
 /**
  * @typedef StationData
  * @type {object}
@@ -395,8 +540,52 @@ const COMPLEX_ID_STATION_NAME_MAP = {
  */
 
 /**
+ * @typedef BusData
+ * @type {object}
+ *
+ * @property {BusStopData[]} stops
+ * @property {Situation[]} situations
+ * 
+ * Needs to be kept in sync with `BusData` in node_helper.js
+ */
+
+/**
+ * @typedef Situation
+ * @type {object}
+ *
+ * @property {string[]} affectedLineRef
+ * @property {string} summary
+ * 
+ * Needs to be kept in sync with `Situation` in node_helper.js
+ */
+
+/**
+ * @typedef BusStopData
+ * @type {object}
+ *
+ * @property {number} stopId
+ * @property {BusArrivalData[]} arrivals
+ * 
+ * Needs to be kept in sync with `BusStopData` in node_helper.js
+ */
+
+/**
+ * @typedef BusArrivalData
+ * @type {object}
+ *
+ * @property {string} name
+ * @property {number} minutes
+ * @property {boolean} isPredicted
+ *
+ * @property {string} lineRef
+ * @property {string} overallDestination
+ * 
+ * Needs to be kept in sync with `BusArrivalData` in node_helper.js
+ */
+
+/**
  * @typedef StationDetails
  * @type {object}
  * @property {string} name
- * @property {[string]} lines
+ * @property {string[]} lines
  */

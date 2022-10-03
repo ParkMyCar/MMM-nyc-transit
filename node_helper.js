@@ -137,75 +137,77 @@ module.exports = NodeHelper.create({
 
   /**
    * 
-   * @param {string} apiKey - API Key provided by the [MTA](http://bt.mta.info/wiki/Developers/Index)
-   * @param {number} stopId - Stop ID, can be found in stops/<borough>.txt
+   * @param {{busApiKey: string, busStops: number[]}} config 
    */
-  fetchTimes: function (apiKey, stopId) {
-    var fetchUrl = new URL(STOP_MONITORING_URL);
-    fetchUrl.searchParams.append("version", STOP_MONITORING_VERSION);
-    fetchUrl.searchParams.append("key", apiKey);
-    fetchUrl.searchParams.append("OperatorRef", STOP_MONITORING_OPERATOR_REF);
-    fetchUrl.searchParams.append("MonitoringRef", stopId.toString());
+  getBusDepartures: function (config) {
+    const self = this
+    const busStops = config.busStops || [];
+    const apiKey = config.busApiKey || null;
 
-    // @ts-ignore
-    fetch(fetchUrl)
-      .then(response => response.json())
-      .then(json => {
-        const result = json.Siri.ServiceDelivery;
+    if (apiKey === null) {
+      return;
+    }
 
-        /** @type {[any]} */
-        const monitoredStops = result.StopMonitoringDelivery[0].MonitoredStopVisit;
-        const stops = monitoredStops
-          .map((obj) => obj.MonitoredVehicleJourney)
-          .map((obj) => {
-            /** @type {VehicleLocation} */
-            const location = {
-              longitude: obj.VehicleLocation.Longitude || 0,
-              latitude: obj.VehicleLocation.Latitude || 0,
-            };
+    const promises = busStops.map((busStop) => {
+      return fetchTimes(apiKey, busStop)
+        .then((data) => {
+          const arrivals = data.stops.map((journey) => {
+            var arrivalTimeStr = "";
+            var isPredicted = false;
 
-            const extensions = obj.MonitoredCall.Extensions || {};
-            const distances = extensions.Distances || {};
-            const capacities = extensions.Capacities || {};
-
-            /** @type {MonitoredCall} */
-            const monitoredCall = {
-              aimedArrivalTime: obj.MonitoredCall.AimedArrivalTime || "",
-              aimedDepartureTime: obj.MonitoredCall.AimedDepartureTime || "",
-              expectedArrivalTime: obj.MonitoredCall.ExpectedArrivalTime || null,
-              expectedDepartureTime: obj.MonitoredCall.ExpectedDepartureTime || null,
-              extensions: {
-                distances: {
-                  presentableDistance: distances.PresentableDistance || null,
-                  distanceFromCall: distances.DistanceFromCall || null,
-                  stopsFromCall: distances.StopsFromCall || null,
-                  callDistanceAlongRoute: distances.CallDistanceAlongRoute || null,
-                },
-                capacities: {
-                  estimatedPassengerCount: capacities.EstimatedPassengerCount || null,
-                },
-              },
-              stopPointRef: obj.MonitoredCall.StopPointRef || "",
+            if (journey.monitoredCall.expectedArrivalTime) {
+              arrivalTimeStr = journey.monitoredCall.expectedArrivalTime;
+              isPredicted = true;
+            } else {
+              arrivalTimeStr = journey.monitoredCall.aimedArrivalTime;
+              isPredicted = false;
             }
+            const arrivalTime = getTimeUntil(new Date(arrivalTimeStr));
 
-            /** @type {MonitoredVehicleJourney} */
-            const stop = {
-              lineRef: obj.LineRef || "",
-              directionRef: obj.DirectionRef || "",
-              operatorRef: obj.OperatorRef || "",
-              originRef: obj.OriginRef || "",
-              vehicleRef: obj.VehicleRef || "",
-              publishedLineName: obj.PublishedLineName || "",
-              destinationName: obj.DestinationName || "",
-              location: location,
-              bearing: obj.Bearing || 0,
-              monitoredCall: monitoredCall,
-              recordedAtTime: obj.RecorededAtTime || "",
+            return {
+              name: journey.publishedLineName,
+              minutes: arrivalTime.minutes,
+              isPredicted,
+              lineRef: journey.lineRef,
+              overallDestination: journey.destinationName,
             };
-            return stop;
           });
-        console.log(util.inspect(stops, false, null, true /* enable colors */))
-      });
+
+          /** @type {BusStopData} */
+          const stop = {
+            stopId: busStop,
+            arrivals,
+          };
+
+          const situations = data.situations
+            .map((element) => {
+              /** @type {Situation} */
+              const situation = {
+                affectedLineRef: element.affects.map((a) => a.lineRef),
+                summary: element.summary,
+              };
+              return situation;
+            });
+
+          return { stop, situations }
+        })
+    });
+
+    // wait for all of our requests to finish
+    Promise.all(promises)
+      .then((results) => {
+        const stops = results.map((r) => r.stop);
+        const situations = results.flatMap((r) => r.situations);
+
+        /** @type {BusData} */
+        const result = { stops, situations };
+
+        self.sendSocketNotification('BUS_TABLE', result);
+
+      })
+      .catch((err) => {
+        throw new Error(err)
+      })
   },
 
   getDate: function (time, walkingTime) {
@@ -225,9 +227,140 @@ module.exports = NodeHelper.create({
   socketNotificationReceived: function (notification, config) {
     if (notification === 'GET_DEPARTURES') {
       this.getDepartures(config)
+      this.getBusDepartures(config)
     }
   },
 })
+
+/**
+ * 
+ * @param {string} apiKey - API Key provided by the [MTA](http://bt.mta.info/wiki/Developers/Index)
+ * @param {number} stopId - Stop ID, can be found in stops/<borough>.txt
+ * 
+ * @returns {Promise<StopMonitoring>}
+ */
+const fetchTimes = (apiKey, stopId) => {
+  var fetchUrl = new URL(STOP_MONITORING_URL);
+  fetchUrl.searchParams.append("version", STOP_MONITORING_VERSION);
+  fetchUrl.searchParams.append("key", apiKey);
+  fetchUrl.searchParams.append("OperatorRef", STOP_MONITORING_OPERATOR_REF);
+  fetchUrl.searchParams.append("MonitoringRef", stopId.toString());
+
+  // @ts-ignore
+  return fetch(fetchUrl)
+    .then(response => response.json())
+    .then(json => {
+      const result = json.Siri.ServiceDelivery;
+
+      /** @type {any[]} */
+      const monitoredStops = result.StopMonitoringDelivery[0].MonitoredStopVisit;
+      const stops = monitoredStops
+        .map((obj) => obj.MonitoredVehicleJourney)
+        .map((obj) => {
+          /** @type {VehicleLocation} */
+          const location = {
+            longitude: obj.VehicleLocation.Longitude || 0,
+            latitude: obj.VehicleLocation.Latitude || 0,
+          };
+
+          const extensions = obj.MonitoredCall.Extensions || {};
+          const distances = extensions.Distances || {};
+          const capacities = extensions.Capacities || {};
+
+          /** @type {MonitoredCall} */
+          const monitoredCall = {
+            aimedArrivalTime: obj.MonitoredCall.AimedArrivalTime || "",
+            aimedDepartureTime: obj.MonitoredCall.AimedDepartureTime || "",
+            expectedArrivalTime: obj.MonitoredCall.ExpectedArrivalTime || null,
+            expectedDepartureTime: obj.MonitoredCall.ExpectedDepartureTime || null,
+            extensions: {
+              distances: {
+                presentableDistance: distances.PresentableDistance || null,
+                distanceFromCall: distances.DistanceFromCall || null,
+                stopsFromCall: distances.StopsFromCall || null,
+                callDistanceAlongRoute: distances.CallDistanceAlongRoute || null,
+              },
+              capacities: {
+                estimatedPassengerCount: capacities.EstimatedPassengerCount || null,
+              },
+            },
+            stopPointRef: obj.MonitoredCall.StopPointRef || "",
+          }
+
+          /** @type {MonitoredVehicleJourney} */
+          const stop = {
+            lineRef: obj.LineRef || "",
+            directionRef: obj.DirectionRef || "",
+            operatorRef: obj.OperatorRef || "",
+            originRef: obj.OriginRef || "",
+            vehicleRef: obj.VehicleRef || "",
+            publishedLineName: obj.PublishedLineName || "",
+            destinationName: obj.DestinationName || "",
+            location: location,
+            bearing: obj.Bearing || 0,
+            monitoredCall: monitoredCall,
+          };
+          return stop;
+        });
+
+      const situationExchangeDelivery = result.SituationExchangeDelivery[0].Situations;
+
+      /** @type {any[]} */
+      const situationElements = situationExchangeDelivery.PtSituationElement || [];
+      const situations = situationElements.map((obj) => {
+        const publicationWindow = obj.PublicationWindow || {};
+        const affects = obj.Affects || {};
+        const vehicleJourneys = affects.VehicleJourneys.AffectedVehicleJourney || [];
+
+        /** @type {SituationElement} */
+        const element = {
+          publicationWindow: {
+            startTime: publicationWindow.StartTime || "",
+            endTime: publicationWindow.EndTime || "",
+          },
+          severity: obj.Severity || "",
+          summary: obj.Summary || "",
+          description: obj.Description || "",
+          affects: vehicleJourneys.map((j) => {
+            /** @type {AffectedVehicleJourney} */
+            const journey = {
+              lineRef: j.LineRef || "",
+              directionRef: j.DirectionRef || null,
+            };
+            return journey;
+          }),
+          creationTime: obj.CreationTime || "",
+          situationNumber: obj.SituationNumber || "",
+        };
+        return element;
+      });
+
+      /** @type {StopMonitoring} */
+      const stopMonitoring = { stops, situations };
+      return stopMonitoring;
+    });
+};
+
+/**
+ * 
+ * @param {Date} future - DateTime stamp that we'll get a duration until
+ * 
+ * @returns {{ hours: number, minutes: number, seconds: number }}
+ */
+const getTimeUntil = (future) => {
+  const now = new Date()
+  const diff = future.getTime() - now.getTime();
+
+  if (diff < 0) {
+    return { hours: 0, minutes: 0, seconds: 0 };
+  }
+
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor(diff / (1000 * 60))
+  const seconds = Math.floor(diff / 1000) - (minutes * 60)
+
+  return { hours, minutes, seconds }
+}
 
 /**
  * @typedef StationData
@@ -246,6 +379,50 @@ module.exports = NodeHelper.create({
  */
 
 /**
+ * @typedef BusData
+ * @type {object}
+ *
+ * @property {BusStopData[]} stops
+ * @property {Situation[]} situations
+ */
+
+/**
+ * @typedef Situation
+ * @type {object}
+ *
+ * @property {string[]} affectedLineRef
+ * @property {string} summary
+ */
+
+/**
+ * @typedef BusStopData
+ * @type {object}
+ *
+ * @property {number} stopId
+ * @property {BusArrivalData[]} arrivals
+ */
+
+/**
+ * @typedef BusArrivalData
+ * @type {object}
+ *
+ * @property {string} name
+ * @property {number} minutes
+ * @property {boolean} isPredicted
+ *
+ * @property {string} lineRef
+ * @property {string} overallDestination
+ */
+
+
+
+// ==== RealTime Bus Feeds ===========================
+//
+// TODO(parker) - Move all of this into it's own NPM package
+//
+//
+
+/**
  * @typedef {import('node-fetch').Response} Response
  */
 
@@ -253,8 +430,8 @@ module.exports = NodeHelper.create({
  * @typedef StopMonitoring
  * @type {Object}
  *
- * @property {[MonitoredVehicleJourney]} stops
- * @property {[SituationElement]} situations
+ * @property {MonitoredVehicleJourney[]} stops
+ * @property {SituationElement[]} situations
  */
 
 /**
@@ -276,8 +453,6 @@ module.exports = NodeHelper.create({
  * @property {number} bearing - Vehicle bearing: 0 is East, increments counter-clockwise
  * 
  * @property {MonitoredCall} monitoredCall - Position of the vehicle
- *
- * @property {string} recordedAtTime
  */
 
 /**
@@ -346,7 +521,7 @@ module.exports = NodeHelper.create({
  * @property {string} summary
  * @property {string} description
  * 
- * @property {AffectedVehicleJourneys} affects
+ * @property {AffectedVehicleJourney[]} affects
  * 
  * @property {string} creationTime
  * @property {string} situationNumber
@@ -361,8 +536,9 @@ module.exports = NodeHelper.create({
  */
 
 /**
- * @typedef AffectedVehicleJourneys
+ * @typedef AffectedVehicleJourney
  * @type {Object}
  * 
- * @property { [{ lineRef: string, directionRef: string }] } vehicleJourneys
+ * @property {string} lineRef
+ * @property {(string | null)} directionRef
  */
