@@ -104,6 +104,11 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
 
     if (data) {
       for (const stationData of data) {
+        // If we don't have any arrival info for a station, don't bother rendering it.
+        if (arrayIsEmpty(stationData.upTownArrivals) && arrayIsEmpty(stationData.downTownArrivals)) {
+          continue;
+        }
+
         // Add a header which contains the name of the station and each line it serves
         const header = this.generateStationHeader(stationData.complexId);
         wrapper.appendChild(header);
@@ -493,11 +498,30 @@ Module.register('MMM-nyc-transit', { /*eslint-disable-line*/
   },
 })
 
+/**
+ * Returns if the array does not exist, or is empty.
+ * 
+ * @param {any[] | undefined | null} array 
+ * 
+ * @returns Boolean
+ */
+const arrayIsEmpty = (array) => {
+  return !Array.isArray(array) || array.length === 0;
+}
+
 /** @type {Object.<number, StationDetails>} */
 const COMPLEX_ID_STATION_NAME_MAP = {
   277: {
     name: "7 Av",
     lines: ["E", "D", "B"]
+  },
+  396: {
+    name: "Lexington Av / 96th Street",
+    lines: ["6"]
+  },
+  475: {
+    name: "2nd Av / 96th Street",
+    lines: ["Q"]
   },
   612: {
     name: "Lexington Av / 51 St",
@@ -515,9 +539,17 @@ const BUS_STOP_ID_TO_NAME_MAP = {
     name: "1st Ave / Mitchell Place",
     lines: ["M15-SBS", "M15"]
   },
+  401749: {
+    name: "2nd Ave / 96 St",
+    lines: ["M15"]
+  },
   401768: {
     name: "2nd Ave / 50 St",
     lines: ["M15-SBS", "M15"]
+  },
+  803182: {
+    name: "2nd Ave / 96 St",
+    lines: ["M15-SBS"]
   }
 }
 
