@@ -79,42 +79,56 @@ module.exports = NodeHelper.create({
 
           response.lines.forEach((line) => {
             // Southbound Departures
-            line.departures.S.forEach((i) => {
+            line.departures.S.forEach((departure) => {
               for (var key in mtaStationIds) {
-                if (i.destinationStationId === mtaStationIds[key]['Station ID']) {
-                  i.destinationStationId = mtaStationIds[key]['Complex ID']
+                if (departure.destinationStationId === mtaStationIds[key]['Station ID']) {
+                  departure.destinationStationId = mtaStationIds[key]['Complex ID']
                 }
               }
 
-              if (i.destinationStationId !== undefined && dirDownTown[n] && !ignoredRoutes.includes(i.routeId)) {
+              if (dirDownTown[n] && !ignoredRoutes.includes(departure.routeId)) {
+                let destination;
+                if (departure.destinationStationId === '281') {
+                  destination = stationIds['606'].name;
+                } else if (departure.destinationStationId) {
+                  destination = stationIds[departure.destinationStationId].name;
+                } else {
+                  destination = "Unknown";
+                }
+
                 /** @type {ArrivalData} */
                 const arrival = {
-                  routeId: i.routeId,
-                  minutes: this.getDate(i.time, walkingTime[n]),
-                  destination: i.destinationStationId === '281'
-                    ? stationIds['606'].name
-                    : stationIds[i.destinationStationId].name,
+                  routeId: departure.routeId,
+                  minutes: this.getDate(departure.time, walkingTime[n]),
+                  destination,
                 };
                 stationData.downTownArrivals.push(arrival);
               }
             })
 
             // Nothbound Departures
-            line.departures.N.forEach((i) => {
+            line.departures.N.forEach((departure) => {
               for (var key in mtaStationIds) {
-                if (i.destinationStationId === mtaStationIds[key]['Station ID']) {
-                  i.destinationStationId = mtaStationIds[key]['Complex ID']
+                if (departure.destinationStationId === mtaStationIds[key]['Station ID']) {
+                  departure.destinationStationId = mtaStationIds[key]['Complex ID']
                 }
               }
 
-              if (i.destinationStationId !== undefined && dirUpTown[n] && !ignoredRoutes.includes(i.routeId)) {
+              if (dirUpTown[n] && !ignoredRoutes.includes(departure.routeId)) {
+                let destination;
+                if (departure.destinationStationId === '281') {
+                  destination = stationIds['606'].name;
+                } else if (departure.destinationStationId) {
+                  destination = stationIds[departure.destinationStationId].name;
+                } else {
+                  destination = "Unknown";
+                }
+
                 /** @type {ArrivalData} */
                 const arrival = {
-                  routeId: i.routeId,
-                  minutes: this.getDate(i.time, walkingTime[n]),
-                  destination: i.destinationStationId === '281'
-                    ? stationIds['606'].name
-                    : stationIds[i.destinationStationId].name,
+                  routeId: departure.routeId,
+                  minutes: this.getDate(departure.time, walkingTime[n]),
+                  destination,
                 };
                 stationData.upTownArrivals.push(arrival);
               }
@@ -375,7 +389,7 @@ const getTimeUntil = (future) => {
  * @type {object}
  * @property {string} routeId
  * @property {number} minutes
- * @property {string} destination
+ * @property {string|null} destination
  */
 
 /**
