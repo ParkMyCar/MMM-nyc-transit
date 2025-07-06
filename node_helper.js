@@ -220,6 +220,7 @@ module.exports = NodeHelper.create({
 
       })
       .catch((err) => {
+        console.log(`Failed to get bus departures: ${err}`);
         throw new Error(err)
       })
   },
@@ -262,8 +263,14 @@ const fetchTimes = (apiKey, stopId) => {
 
   // @ts-ignore
   return fetch(fetchUrl)
-    .then(response => response.json())
+    .then(response => {
+      console.log(`MTA Bus API response status: ${response.statusText}`);
+      return response.json();
+    })
     .then(json => {
+      const debugResponse = JSON.stringify(json);
+      console.log(`MTA Bus API response: ${debugResponse}`);
+
       const result = json.Siri.ServiceDelivery;
 
       /** @type {any[]} */
