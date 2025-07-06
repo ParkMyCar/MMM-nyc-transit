@@ -45,11 +45,12 @@
   text-transform: uppercase;
   text-align: center;
   padding: 2px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Helvetica, Arial, sans-serif;
   font-size: 48px;
   font-weight: bold;
   display: inline-grid;
   align-content: center;
+  padding-top: 8px;
 }
 
 .mta__train--list {
