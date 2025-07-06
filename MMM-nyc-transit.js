@@ -539,7 +539,7 @@ const BUS_STOP_ID_TO_NAME_MAP = {
     name: "1st Ave / Mitchell Place",
     lines: ["M15-SBS", "M15"]
   },
-  401749: {
+  401479: {
     name: "2nd Ave / 96 St",
     lines: ["M15"]
   },
@@ -547,9 +547,17 @@ const BUS_STOP_ID_TO_NAME_MAP = {
     name: "2nd Ave / 50 St",
     lines: ["M15-SBS", "M15"]
   },
-  803182: {
+  405516: {
     name: "2nd Ave / 96 St",
     lines: ["M15-SBS"]
+  },
+  401920: {
+    name: "86th St / 2nd Ave",
+    lines: ["M86-SBS"],
+  },
+  403632: {
+    name: "96th St / 2nd Ave",
+    lines: ["M96"],
   }
 }
 

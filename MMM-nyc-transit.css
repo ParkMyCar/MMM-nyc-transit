@@ -233,3 +233,12 @@
 .mta__bus--line-m15-sbs {
   background-color: #0000c4;
 }
+
+.mta__bus--line-m86-sbs {
+  background-color: #eea941;
+  color: #000000;
+}
+
+.mta__bus--line-m96 {
+  background-color: #80bc56;
+}

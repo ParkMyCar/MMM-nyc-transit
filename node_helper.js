@@ -205,6 +205,10 @@ module.exports = NodeHelper.create({
 
           return { stop, situations }
         })
+        .catch((err) => {
+          console.log(`Failed to get bus departures: ${err}`);
+          throw new Error(err)
+        })
     });
 
     // wait for all of our requests to finish
@@ -250,7 +254,10 @@ module.exports = NodeHelper.create({
 /**
  * 
  * @param {string} apiKey - API Key provided by the [MTA](http://bt.mta.info/wiki/Developers/Index)
- * @param {number} stopId - Stop ID, can be found in stops/<borough>.txt
+ * @param {number} stopId - Stop ID, can be found via two ways:
+ *    1. Going to the MTA's [realtime arrival webpage](https://bustime.mta.info), finding your route
+ *       and then selecting your stop. The ID should show up as the `?q=` query param.
+ *    2. From the [MTA's Developer Resources](https://www.mta.info/developers) under the "Buses" section.
  * 
  * @returns {Promise<StopMonitoring>}
  */
@@ -265,7 +272,7 @@ const fetchTimes = (apiKey, stopId) => {
   return fetch(fetchUrl)
     .then(response => {
       console.log(`MTA Bus API response status: ${response.statusText}`);
-      return response.json();
+      return response.json()
     })
     .then(json => {
       const debugResponse = JSON.stringify(json);
@@ -324,10 +331,10 @@ const fetchTimes = (apiKey, stopId) => {
           return stop;
         });
 
-      const situationExchangeDelivery = result.SituationExchangeDelivery[0].Situations;
+      const situationExchangeDelivery = result.SituationExchangeDelivery?.[0]?.Situations;
 
       /** @type {any[]} */
-      const situationElements = situationExchangeDelivery.PtSituationElement || [];
+      const situationElements = situationExchangeDelivery?.PtSituationElement || [];
       const situations = situationElements.map((obj) => {
         const publicationWindow = obj.PublicationWindow || {};
         const affects = obj.Affects || {};
